@@ -1,0 +1,26 @@
+{
+  "name": "vidget",
+  "version": "1.0.0",
+  "description": "A CLI tool to download YouTube videos as MP4",
+  "main": "src/index.js",
+  "bin": {
+    "vidget": "src/cli.js"
+  },
+  "scripts": {
+    "start": "node src/cli.js"
+  },
+  "keywords": [
+    "youtube",
+    "download",
+    "video",
+    "mp4"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "yt-dlp-exec": "^1.0.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

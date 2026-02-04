@@ -1,0 +1,9 @@
+.DS_Store
+node_modules/
+npm-debug.log*
+.npm
+*.mp4
+downloads/
+.env
+.vscode/
+.idea/
