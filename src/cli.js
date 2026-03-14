@@ -3,6 +3,7 @@
 const downloader = require('./downloader');
 
 const args = process.argv.slice(2);
+const MODE_FLAGS = new Set(['--auto', '--video', '--playlist']);
 
 function isPlaylistUrl(url) {
   try {
@@ -16,15 +17,61 @@ function isPlaylistUrl(url) {
   }
 }
 
-if (args.length === 0) {
-  console.error('Usage: vidget <YouTube video or playlist URL>');
-  console.error('Example: vidget https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-  console.error('Playlist example: vidget https://www.youtube.com/playlist?list=PL1234567890');
+function printUsage() {
+  console.error('Usage: vidget [--auto|--video|--playlist] <YouTube video or playlist URL>');
+  console.error('Example (auto): vidget https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+  console.error('Example (playlist): vidget --playlist https://www.youtube.com/playlist?list=PL1234567890');
+  console.error('Example (video): vidget --video "https://www.youtube.com/watch?v=ID&list=LIST"');
+}
+
+function exitWithUsage(message) {
+  if (message) {
+    console.error(`✗ ${message}`);
+  }
+  printUsage();
   process.exit(1);
 }
 
-const url = args[0];
-const playlistMode = isPlaylistUrl(url);
+let selectedMode = 'auto';
+const modeFlags = new Set();
+let url = null;
+
+for (const arg of args) {
+  if (arg === '--help' || arg === '-h') {
+    printUsage();
+    process.exit(0);
+  }
+
+  if (arg.startsWith('--')) {
+    if (!MODE_FLAGS.has(arg)) {
+      exitWithUsage(`Unknown flag: ${arg}`);
+    }
+
+    modeFlags.add(arg);
+    continue;
+  }
+
+  if (url !== null) {
+    exitWithUsage('Please provide exactly one URL.');
+  }
+
+  url = arg;
+}
+
+if (modeFlags.size > 1) {
+  exitWithUsage('Use only one mode flag at a time.');
+}
+
+if (modeFlags.size === 1) {
+  selectedMode = [...modeFlags][0].slice(2);
+}
+
+if (!url) {
+  exitWithUsage('Missing YouTube URL.');
+}
+
+const playlistMode = selectedMode === 'playlist'
+  || (selectedMode === 'auto' && isPlaylistUrl(url));
 
 const downloadFn = playlistMode
   ? downloader.downloadPlaylist

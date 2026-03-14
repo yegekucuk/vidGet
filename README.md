@@ -27,14 +27,28 @@ choco install yt-dlp        # windows
 ```
 ## Usage
 ```bash
-vidget <YouTube video or playlist URL>
+vidget [--auto|--video|--playlist] <YouTube video or playlist URL>
 ```
+
+### Mode flags
+- `--auto` (default): detect video vs playlist from the URL
+- `--video`: force single-video download mode
+- `--playlist`: force playlist download mode
+
+If no mode flag is provided, vidGet behaves the same as `--auto`.
 
 ### Playlist download
 Paste a playlist URL and vidGet will create a folder with the playlist name, then download all videos into it:
 
 ```bash
-vidget "https://www.youtube.com/playlist?list=PL1234567890"
+vidget --playlist "https://www.youtube.com/playlist?list=PL1234567890"
+```
+
+### Force video mode
+When a URL includes both `v` and `list`, you can force single-video download:
+
+```bash
+vidget --video "https://www.youtube.com/watch?v=ID&list=LIST"
 ```
 
 ### URLs with "&"
