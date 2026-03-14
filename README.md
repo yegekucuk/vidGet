@@ -3,6 +3,7 @@ vidGet is a Node.js CLI tool to download YouTube videos as MP4 files.
 
 vidGet;
 - Downloads YouTube videos to MP4 format ✅
+- Downloads YouTube playlists into a folder named after the playlist ✅
 - Saves videos to the current working directory ✅
 - Names files after the video title ✅
 - Removes all forbidden filename characters (Windows + Unix) ✅
@@ -26,7 +27,14 @@ choco install yt-dlp        # windows
 ```
 ## Usage
 ```bash
-vidget <YouTube URL>
+vidget <YouTube video or playlist URL>
+```
+
+### Playlist download
+Paste a playlist URL and vidGet will create a folder with the playlist name, then download all videos into it:
+
+```bash
+vidget "https://www.youtube.com/playlist?list=PL1234567890"
 ```
 
 ### URLs with "&"

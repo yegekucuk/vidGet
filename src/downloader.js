@@ -21,6 +21,12 @@ function formatMiB(value) {
   return `${value.toFixed(2)} MB`;
 }
 
+function validateYouTubeUrl(url) {
+  if (typeof url !== 'string' || (!url.includes('youtube.com') && !url.includes('youtu.be'))) {
+    throw new Error('Invalid YouTube URL');
+  }
+}
+
 function createProgressHandler() {
   let lastLine = '';
   let buffer = '';
@@ -69,9 +75,14 @@ function createProgressHandler() {
  * Forbidden characters: < > : " / \ | ? *
  * Also handles control characters and other invalid characters
  * @param {string} filename - The original filename
+ * @param {string} fallbackName - Fallback name when sanitization results in empty string
  * @returns {string} - Sanitized filename
  */
-function sanitizeFilename(filename) {
+function sanitizeFilename(filename, fallbackName = 'video') {
+  if (typeof filename !== 'string') {
+    filename = String(filename || fallbackName);
+  }
+
   // Remove forbidden characters: < > : " / \ | ? * and control characters
   let sanitized = filename.replace(/[<>:"/\\|?*\x00-\x1f]/g, '');
   
@@ -83,7 +94,7 @@ function sanitizeFilename(filename) {
   
   // If filename is empty after sanitization, use a default name
   if (sanitized.length === 0) {
-    sanitized = 'video';
+    sanitized = fallbackName;
   }
   
   // Limit filename length (most filesystems support 255 bytes)
@@ -105,10 +116,7 @@ function sanitizeFilename(filename) {
  */
 async function downloadVideo(url) {
   try {
-    // Validate URL
-    if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
-      throw new Error('Invalid YouTube URL');
-    }
+    validateYouTubeUrl(url);
 
     console.log('Fetching video information...');
 
@@ -133,8 +141,10 @@ async function downloadVideo(url) {
     // Download video with progress
     const downloadProcess = ytDlp.exec(url, {
       format: 'best[ext=mp4]/best',
+      mergeOutputFormat: 'mp4',
       output: outputPath,
       noWarnings: true,
+      windowsFilenames: true,
       preferFreeFormats: false,
       progress: true,
       newline: true,
@@ -169,7 +179,100 @@ async function downloadVideo(url) {
   }
 }
 
+/**
+ * Downloads a YouTube playlist into a folder named after the playlist
+ * @param {string} url - The YouTube playlist URL
+ * @returns {Promise<{folderName: string, videoCount: number}>} - Download details
+ */
+async function downloadPlaylist(url) {
+  try {
+    validateYouTubeUrl(url);
+
+    console.log('Fetching playlist information...');
+
+    const info = await ytDlp(url, {
+      dumpSingleJson: true,
+      noWarnings: true,
+      yesPlaylist: true,
+      flatPlaylist: true,
+    });
+
+    if (!info) {
+      throw new Error('Could not fetch playlist information');
+    }
+
+    const isPlaylist = info._type === 'playlist' || Array.isArray(info.entries);
+    if (!isPlaylist) {
+      throw new Error('URL does not point to a playlist');
+    }
+
+    const playlistTitle = info.title || 'playlist';
+    const folderName = sanitizeFilename(playlistTitle, 'playlist');
+    const outputDir = path.join(process.cwd(), folderName);
+
+    if (fs.existsSync(outputDir) && !fs.statSync(outputDir).isDirectory()) {
+      throw new Error(`Cannot create playlist folder because a file already exists at ${outputDir}`);
+    }
+
+    fs.mkdirSync(outputDir, { recursive: true });
+
+    const expectedCount = Array.isArray(info.entries) ? info.entries.length : 0;
+    console.log(`Downloading playlist: ${playlistTitle}`);
+    if (expectedCount > 0) {
+      console.log(`Videos found: ${expectedCount}`);
+    }
+    console.log(`Saving to folder: ${outputDir}`);
+
+    const outputTemplate = path.join(outputDir, '%(playlist_index)03d - %(title)s.%(ext)s');
+
+    const downloadProcess = ytDlp.exec(url, {
+      yesPlaylist: true,
+      format: 'best[ext=mp4]/best',
+      mergeOutputFormat: 'mp4',
+      output: outputTemplate,
+      noWarnings: true,
+      windowsFilenames: true,
+      preferFreeFormats: false,
+      progress: true,
+      newline: true,
+    }, {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+
+    const handleProgress = createProgressHandler();
+    if (downloadProcess.stderr) {
+      downloadProcess.stderr.on('data', handleProgress);
+    }
+    if (downloadProcess.stdout) {
+      downloadProcess.stdout.on('data', handleProgress);
+    }
+
+    await downloadProcess;
+    process.stdout.write('\n');
+
+    const downloadedFiles = fs.readdirSync(outputDir).filter(entry => {
+      const fullPath = path.join(outputDir, entry);
+      return fs.statSync(fullPath).isFile();
+    });
+
+    if (downloadedFiles.length === 0) {
+      throw new Error('Playlist download completed but no files were found in the output folder');
+    }
+
+    console.log(`Downloaded ${downloadedFiles.length} video(s)`);
+
+    return {
+      folderName,
+      videoCount: downloadedFiles.length,
+    };
+  } catch (error) {
+    throw new Error(`Failed to download playlist: ${error.message}`);
+  }
+}
+
 module.exports = {
   downloadVideo,
+  downloadPlaylist,
   sanitizeFilename,
 };
