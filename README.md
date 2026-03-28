@@ -27,7 +27,7 @@ choco install yt-dlp        # windows
 ```
 ## Usage
 ```bash
-vidget [--auto|--video|--playlist] <YouTube video or playlist URL>
+vidget [--auto|--video|--playlist] [--quality <p>] <YouTube video or playlist URL>
 ```
 
 ### Mode flags
@@ -36,6 +36,16 @@ vidget [--auto|--video|--playlist] <YouTube video or playlist URL>
 - `--playlist`: force playlist download mode
 
 If no mode flag is provided, vidGet behaves the same as `--auto`.
+
+### Quality flag
+- `--quality <p>`: set maximum output quality by video height (default: `360`)
+- Works in both video and playlist modes
+
+If no quality flag is provided, vidGet uses `360p`.
+
+```bash
+vidget --quality 720 "https://www.youtube.com/watch?v=ID"
+```
 
 ### Playlist download
 Paste a playlist URL and vidGet will create a folder with the playlist name, then download all videos into it:

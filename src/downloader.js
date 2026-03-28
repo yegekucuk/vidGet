@@ -70,6 +70,10 @@ function createProgressHandler() {
   };
 }
 
+function buildFormatSelector(quality) {
+  return `bestvideo[height<=${quality}][ext=mp4][vcodec^=avc1]+bestaudio[ext=m4a][acodec^=mp4a]/bestvideo[height<=${quality}][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=${quality}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${quality}]+bestaudio/best[height<=${quality}][ext=mp4][vcodec^=avc1][acodec^=mp4a]/best[height<=${quality}][vcodec^=avc1][acodec^=mp4a]/best[height<=${quality}][ext=mp4][vcodec!=none][acodec!=none]/best[height<=${quality}][vcodec!=none][acodec!=none]/best[ext=mp4][vcodec!=none][acodec!=none]/best[vcodec!=none][acodec!=none]`;
+}
+
 /**
  * Sanitizes a filename by removing forbidden characters
  * Forbidden characters: < > : " / \ | ? *
@@ -112,9 +116,10 @@ function sanitizeFilename(filename, fallbackName = 'video') {
 /**
  * Downloads a YouTube video and saves it as MP4
  * @param {string} url - The YouTube video URL
+ * @param {number} quality - Maximum video height in p
  * @returns {Promise<string>} - The filename of the downloaded video
  */
-async function downloadVideo(url) {
+async function downloadVideo(url, quality = 360) {
   try {
     validateYouTubeUrl(url);
 
@@ -136,13 +141,15 @@ async function downloadVideo(url) {
     const outputPath = path.join(process.cwd(), filename);
 
     console.log(`Downloading: ${videoTitle}`);
+    console.log(`Requested max quality: ${quality}p`);
     console.log(`Saving to: ${outputPath}`);
 
     // Download video with progress
     const downloadProcess = ytDlp.exec(url, {
-      format: 'best[ext=mp4]/best',
+      format: buildFormatSelector(quality),
       mergeOutputFormat: 'mp4',
       output: outputPath,
+      forceOverwrites: true,
       noWarnings: true,
       windowsFilenames: true,
       preferFreeFormats: false,
@@ -182,9 +189,10 @@ async function downloadVideo(url) {
 /**
  * Downloads a YouTube playlist into a folder named after the playlist
  * @param {string} url - The YouTube playlist URL
+ * @param {number} quality - Maximum video height in p
  * @returns {Promise<{folderName: string, videoCount: number}>} - Download details
  */
-async function downloadPlaylist(url) {
+async function downloadPlaylist(url, quality = 360) {
   try {
     validateYouTubeUrl(url);
 
@@ -218,6 +226,7 @@ async function downloadPlaylist(url) {
 
     const expectedCount = Array.isArray(info.entries) ? info.entries.length : 0;
     console.log(`Downloading playlist: ${playlistTitle}`);
+    console.log(`Requested max quality: ${quality}p`);
     if (expectedCount > 0) {
       console.log(`Videos found: ${expectedCount}`);
     }
@@ -227,9 +236,10 @@ async function downloadPlaylist(url) {
 
     const downloadProcess = ytDlp.exec(url, {
       yesPlaylist: true,
-      format: 'best[ext=mp4]/best',
+      format: buildFormatSelector(quality),
       mergeOutputFormat: 'mp4',
       output: outputTemplate,
+      forceOverwrites: true,
       noWarnings: true,
       windowsFilenames: true,
       preferFreeFormats: false,
